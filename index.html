@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Theater Chatbot</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      #chat-area::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      #chat-area::-webkit-scrollbar-thumb {
+        background-color: rgba(255, 255, 255, 0.2);
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-900 text-white h-screen overflow-hidden flex">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-gray-800 p-6 hidden md:block">
+      <h2 class="text-2xl font-bold mb-6">🎭 TheaterBot</h2>
+      <nav class="space-y-4 text-gray-300">
+        <a href="#" class="block hover:text-white">Home</a>
+        <a href="#" class="block hover:text-white">Movies</a>
+        <a href="#" class="block hover:text-white">Shows</a>
+        <a href="#" class="block hover:text-white">Actors</a>
+        <a href="#" class="block hover:text-white">Settings</a>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col h-screen">
+      <!-- Chat Area -->
+      <div id="chat-area" class="flex-1 overflow-y-auto px-4 py-6 space-y-4">
+        <!-- Messages will be appended here -->
+      </div>
+
+      <!-- Chat Input -->
+      <form
+        id="chatbot-form"
+        class="w-full px-4 py-4 flex gap-3 bg-gray-900 border-t border-gray-700"
+      >
+        <input
+          type="text"
+          id="user-input"
+          placeholder="Ask about movies, shows, actors..."
+          class="flex-grow p-3 bg-gray-800 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+          required
+        />
+        <button
+          type="submit"
+          class="bg-purple-600 hover:bg-purple-700 text-white px-5 py-3 rounded-xl font-semibold transition duration-200"
+        >
+          Send
+        </button>
+      </form>
+    </main>
+
+    <!-- Script -->
+    <script>
+      const chatbotForm = document.getElementById("chatbot-form");
+      const userInput = document.getElementById("user-input");
+      const chatArea = document.getElementById("chat-area");
+
+      function scrollToBottom() {
+        chatArea.scrollTop = chatArea.scrollHeight;
+      }
+
+      function renderBotReply(replyText) {
+        let formatted = replyText
+          .replace(/\*(.*?)\*/g, "<strong>$1</strong>")
+          .replace(/\n/g, "<br>")
+          .replace(
+            /🖼️ <strong>Poster:<\/strong> (https:\/\/image\.tmdb\.org\/t\/p\/w500\/[^\s<]+)/g,
+            '🖼️ <br><img src="$1" alt="Poster" class="my-2 max-w-xs rounded-xl shadow">'
+          );
+
+        const botMessage = document.createElement("div");
+        botMessage.className = "flex items-start gap-3 text-sm";
+        botMessage.innerHTML = `
+          <img src="https://cdn-icons-png.flaticon.com/512/4712/4712027.png" class="w-8 h-8 rounded-full mt-1" alt="Bot" />
+          <div class="bg-gray-800 p-4 rounded-xl max-w-[85%]">${formatted}</div>`;
+        chatArea.appendChild(botMessage);
+        scrollToBottom();
+      }
+
+      chatbotForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const message = userInput.value.trim();
+        if (!message) return;
+
+        const userMessage = document.createElement("div");
+        userMessage.className = "flex items-start justify-end gap-3 text-sm";
+        userMessage.innerHTML = `
+          <div class="bg-purple-600 p-4 rounded-xl max-w-[85%]">${message}</div>
+          <img src="https://cdn-icons-png.flaticon.com/512/147/147144.png" class="w-8 h-8 rounded-full mt-1" alt="User" />`;
+        chatArea.appendChild(userMessage);
+
+        scrollToBottom();
+
+        try {
+          const response = await fetch("http://localhost:5000/message", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message }),
+          });
+
+          const data = await response.json();
+          renderBotReply(data.reply);
+        } catch (error) {
+          const errorMessage = document.createElement("div");
+          errorMessage.className = "text-red-400 text-sm";
+          errorMessage.textContent =
+            "⚠️ Server error. Please make sure backend is running.";
+          chatArea.appendChild(errorMessage);
+        }
+
+        userInput.value = "";
+      });
+    </script>
+  </body>
+</html>
